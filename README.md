@@ -1,3 +1,7 @@
+# Auto Apply to Dice
+
+Automatically apply to jobs on Dice. Enter username, password, the search keyword, and your resume path. This only works for Easy apply jobs.
+
 # Usage
 
 1. Install Python 3 and make sure it's in your path.
