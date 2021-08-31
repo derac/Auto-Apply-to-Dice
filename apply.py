@@ -1,4 +1,5 @@
 import argparse
+from itertools import count
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -72,10 +73,8 @@ except Exception as e:
     print("Don't need to log in. Continuing.")
 
 # iterate through pages until there are no links
-page_number = 1
-while True:
+for page_number in count(1):
     search_url = SEARCH_URL_WITHOUT_PAGE % page_number
-    page_number += 1
     driver.get(search_url)
     try:
         search_cards = wait.until(
@@ -132,5 +131,5 @@ while True:
         submit_job_button = driver.find_element_by_css_selector("button#submit-job-btn")
         submit_job_button.click()
 
-        # TODO: finish script and remove quit
+        # TODO: test/finish script and remove quit
         quit()
