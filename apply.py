@@ -37,7 +37,7 @@ argparser.add_argument(
     help="Resume PDF to send for the job applications.",
 )
 argparser.add_argument(
-    "-cache",
+    "-cache_path",
     "-c",
     type=str,
     default="",
@@ -57,8 +57,8 @@ SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCo
 
 # Create webdriver, add user data to persist login and not have to relog
 options = Options()
-if args.cache:
-    options.add_argument("user-data-dir=" + args.cache)
+if args.cache_path:
+    options.add_argument("user-data-dir=" + args.cache_path)
 driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, args.wait_s)
 
