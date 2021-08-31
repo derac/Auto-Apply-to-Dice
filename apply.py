@@ -37,10 +37,11 @@ argparser.add_argument(
     help="Resume PDF to send for the job applications.",
 )
 argparser.add_argument(
-    "-cache_session",
+    "-cache",
     "-c",
-    action="store_true",
-    help="Switch to cache user session, so you don't need to keep logging in.",
+    type=str,
+    default="",
+    help="Directory to cache browser session in, so you stay logged in.",
 )
 argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
@@ -50,8 +51,8 @@ WAIT_TIME_S = 3
 
 # Create webdriver, add user data to persist login and not have to relog
 options = Options()
-if args.cache_session:
-    options.add_argument("user-data-dir=c:/tmp/chrome_data")
+if args.cache:
+    options.add_argument("user-data-dir=" + args.cache)
 driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, WAIT_TIME_S)
 
