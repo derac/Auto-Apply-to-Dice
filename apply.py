@@ -29,6 +29,19 @@ argparser.add_argument(
     required=True,
     help="Keyword to search for jobs by.",
 )
+argparser.add_argument(
+    "-resume_path",
+    "-r",
+    type=str,
+    required=True,
+    help="Resume PDF to send for the job applications.",
+)
+argparser.add_argument(
+    "-cache_session",
+    "-c",
+    action="store_true",
+    help="Switch to cache user session, so you don't need to keep logging in.",
+)
 argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
 
@@ -37,20 +50,19 @@ WAIT_TIME_S = 3
 
 # Create webdriver, add user data to persist login and not have to relog
 options = Options()
-# TODO: will remove data dir for final script
-options.add_argument("user-data-dir=c:/tmp/chrome_data")
+if args.cache_session:
+    options.add_argument("user-data-dir=c:/tmp/chrome_data")
 driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, WAIT_TIME_S)
 
-# TODO: uncomment after testing
 # log in
-# driver.get("https://www.dice.com/dashboard/login")
-# # wait for login elements to appear
-# try:
-#     elem = wait.until(EC.presence_of_element_located((By.ID, "email")))
-#     elem.send_keys(f"{args.email}\t{args.password}{Keys.RETURN}")
-# except:
-#     print("Don't need to log in. Continuing.")
+driver.get("https://www.dice.com/dashboard/login")
+try:
+    elem = wait.until(EC.presence_of_element_located((By.ID, "email")))
+    elem.send_keys(f"{args.username}\t{args.password}{Keys.RETURN}")
+except Exception as e:
+    print(e)
+    print("Don't need to log in. Continuing.")
 
 # iterate through pages until there are no links
 page_number = 1
@@ -62,24 +74,55 @@ while True:
         search_cards = wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.search-card"))
         )
-    except:
+    except Exception as e:
+        print(e)
         print("No jobs found within wait limit.")
         break
-    # wait for ribbons to appear so we know what we've applied to
-    ribbons = wait.until(
-        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "span.ribbon-inner"))
-    )
+    # wait for ribbons to appear (if there are ribbons)
+    try:
+        ribbons = wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "span.ribbon-inner"))
+        )
+    except:
+        ...
     for card in search_cards:
-        print(card.text)
         link = card.find_element_by_css_selector("a.card-title-link")
         print(f"Applying to {link.text}")
         try:
             ribbon = card.find_element_by_css_selector("span.ribbon-inner")
-            if ribbon and ribbon.text == "applied":
+            if ribbon.text == "applied":
                 print("Already applied.")
                 continue
         except:
             ...
         job_url = link.get_attribute("href")
         driver.get(job_url)
+        apply_container = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "dhi-wc-apply-button"))
+        )
+        # wait for apply container to say Apply Now
+        wait.until(
+            EC.text_to_be_present_in_element(
+                (By.CSS_SELECTOR, "dhi-wc-apply-button"), "Apply Now"
+            )
+        )
+        # click on apply button
+        driver.execute_script(
+            "arguments[0].shadowRoot.querySelector('button').click();", apply_container
+        )
+        # wait for upload a resume radio to be visible
+        resume_radio = wait.until(
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, "input#upload-resume-radio")
+            )
+        )
+        resume_radio.click()
+        # enter file location into file input
+        resume_file_input = driver.find_element_by_css_selector(
+            "input#upload-resume-file-input"
+        )
+        resume_file_input.send_keys(args.resume_path)
+        submit_job_button = driver.find_element_by_css_selector("button#submit-job-btn")
+        submit_job_button.click()
+        # driver.close()
         quit()
