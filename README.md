@@ -8,7 +8,7 @@
 ## Command parameters
 
 ```
-usage: apply.py [-h] -username USERNAME -password PASSWORD -keyword KEYWORD -resume_path RESUME_PATH [-cache CACHE]
+usage: apply.py [-h] -username USERNAME -password PASSWORD -keyword KEYWORD -resume_path RESUME_PATH [-cache CACHE] [-wait_s WAIT_S]
 
 Automatically apply for jobs on Dice.
 
@@ -24,4 +24,6 @@ optional arguments:
                         Resume PDF to send for the job applications.
   -cache CACHE, -c CACHE
                         Directory to cache browser session in, so you stay logged in.
+  -wait_s WAIT_S, -w WAIT_S
+                        Number of seconds to wait for selenium to find things.
 ```

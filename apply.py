@@ -43,18 +43,24 @@ argparser.add_argument(
     default="",
     help="Directory to cache browser session in, so you stay logged in.",
 )
+argparser.add_argument(
+    "-wait_s",
+    "-w",
+    type=int,
+    default=3,
+    help="Number of seconds to wait for selenium to find things.",
+)
 argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
 
 SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCode=US&radius=30&radiusUnit=mi&page=%s&pageSize=100&filters.postedDate=ONE&filters.employmentType=THIRD_PARTY&filters.easyApply=true&language=en"
-WAIT_TIME_S = 3
 
 # Create webdriver, add user data to persist login and not have to relog
 options = Options()
 if args.cache:
     options.add_argument("user-data-dir=" + args.cache)
 driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, WAIT_TIME_S)
+wait = WebDriverWait(driver, args.wait_s)
 
 # log in
 driver.get("https://www.dice.com/dashboard/login")
@@ -125,5 +131,6 @@ while True:
         resume_file_input.send_keys(args.resume_path)
         submit_job_button = driver.find_element_by_css_selector("button#submit-job-btn")
         submit_job_button.click()
-        # driver.close()
+
+        # TODO: finish script and remove quit
         quit()
