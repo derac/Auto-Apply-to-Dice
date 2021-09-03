@@ -1,3 +1,4 @@
+from os import scandir
 import argparse
 from itertools import count
 
@@ -35,7 +36,7 @@ argparser.add_argument(
     "-r",
     type=str,
     required=True,
-    help="Resume PDF to send for the job applications.",
+    help="Absolute path to resume file to send for the job applications.",
 )
 argparser.add_argument(
     "-cache_path",
@@ -91,27 +92,32 @@ for page_number in count(1):
         )
     except:
         ...
+    job_urls = []
     for card in search_cards:
         link = card.find_element_by_css_selector("a.card-title-link")
-        print(f"Applying to {link.text}")
         try:
             ribbon = card.find_element_by_css_selector("span.ribbon-inner")
             if ribbon.text == "applied":
-                print("Already applied.")
                 continue
         except:
             ...
-        job_url = link.get_attribute("href")
+        job_urls.append((link.text, link.get_attribute("href")))
+
+    for job_text, job_url in job_urls:
+        print(f"Applying to {job_text}")
         driver.get(job_url)
         apply_container = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "dhi-wc-apply-button"))
         )
         # wait for apply container to say Apply Now
-        wait.until(
-            EC.text_to_be_present_in_element(
-                (By.CSS_SELECTOR, "dhi-wc-apply-button"), "Apply Now"
+        try:
+            wait.until(
+                EC.text_to_be_present_in_element(
+                    (By.CSS_SELECTOR, "dhi-wc-apply-button"), "Apply Now"
+                )
             )
-        )
+        except:
+            continue
         # click on apply button
         driver.execute_script(
             "arguments[0].shadowRoot.querySelector('button').click();", apply_container
@@ -130,6 +136,4 @@ for page_number in count(1):
         resume_file_input.send_keys(args.resume_path)
         submit_job_button = driver.find_element_by_css_selector("button#submit-job-btn")
         submit_job_button.click()
-
-        # TODO: test/finish script and remove quit
         quit()
