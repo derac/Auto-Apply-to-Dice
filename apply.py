@@ -1,4 +1,5 @@
-from os import scandir
+import json
+import os
 import argparse
 from itertools import count
 from time import sleep
@@ -57,6 +58,14 @@ argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
 
 SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCode=US&radius=30&radiusUnit=mi&page=%s&pageSize=100&filters.postedDate=ONE&filters.employmentType=THIRD_PARTY&filters.easyApply=true&language=en"
+
+# see if any data exists for this user
+USER_DATA_PATH = os.path.join("cached_data", f"{args.username}.json")
+user_data = {}
+if os.path.exists(USER_DATA_PATH):
+    with open(USER_DATA_PATH, "r") as file_handle:
+        user_data = json.loads(file_handle.read())
+        # dictionary of {job_id: applied boolean}
 
 # Create webdriver, add user data to persist login and not have to relog
 options = Options()
