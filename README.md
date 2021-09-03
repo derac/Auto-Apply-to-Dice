@@ -5,6 +5,7 @@ Automatically apply to jobs on Dice. Enter username, password, the search keywor
 # Usage
 
 1. Install Python 3 and make sure it's in your path.
+1. Install chromedriver for selenium, you can put it in your path or in this directory - https://sites.google.com/chromium.org/driver/downloads
 1. cd to this directory in your terminal. `cd`
 1. install requirements. `pip install -r requirements.txt`
 1. `python3 ./apply.py -u <USERNAME> -p <PASSWORD> -k <KEYWORD> -r <RESUME PATH>`
