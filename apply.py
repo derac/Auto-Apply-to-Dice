@@ -61,10 +61,10 @@ SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCo
 
 # see if any data exists for this user
 USER_DATA_PATH = os.path.join("cached_data", f"{args.username}.json")
-user_data = {}
+completed_jobs = []
 if os.path.exists(USER_DATA_PATH):
     with open(USER_DATA_PATH, "r") as file_handle:
-        user_data = json.loads(file_handle.read())
+        completed_jobs = json.loads(file_handle.read())
         # dictionary of {job_id: applied boolean}
 
 # Create webdriver, add user data to persist login and not have to relog
@@ -105,15 +105,18 @@ for page_number in count(1):
     job_urls = []
     for card in search_cards:
         link = card.find_element_by_css_selector("a.card-title-link")
+        job_id = link.get_attribute("id")
+        if job_id in completed_jobs:
+            continue
         try:
             ribbon = card.find_element_by_css_selector("span.ribbon-inner")
             if ribbon.text == "applied":
                 continue
         except:
             ...
-        job_urls.append((link.text, link.get_attribute("href")))
+        job_urls.append((job_id, link.text, link.get_attribute("href")))
 
-    for job_text, job_url in job_urls:
+    for job_id, job_text, job_url in job_urls:
         print(f"Applying to {job_text}")
         driver.get(job_url)
         apply_container = wait.until(
@@ -126,32 +129,39 @@ for page_number in count(1):
                     (By.CSS_SELECTOR, "dhi-wc-apply-button"), "Apply Now"
                 )
             )
+            # click on apply button
+            driver.execute_script(
+                "arguments[0].shadowRoot.querySelector('button').click();",
+                apply_container,
+            )
+            # wait for upload a resume radio to be visible
+            resume_radio = wait.until(
+                EC.visibility_of_element_located(
+                    (By.CSS_SELECTOR, "input#upload-resume-radio")
+                )
+            )
+            apply_now_button = driver.find_element_by_css_selector(
+                "button#submit-job-btn"
+            )
+            # check if captcha is present and if so, wait for the user to fill this one out
+            # so as not to upset google too much
+            if driver.find_element_by_css_selector(
+                "div[id^=googleCaptchaSection]"
+            ).is_displayed():
+                print("Waiting for user to fill form out, since captcha is seen.")
+                while apply_now_button.is_displayed():
+                    sleep(0.1)
+            else:
+                resume_radio.click()
+                # enter file location into file input
+                resume_file_input = driver.find_element_by_css_selector(
+                    "input#upload-resume-file-input"
+                )
+                resume_file_input.send_keys(args.resume_path)
+                apply_now_button.click()
         except:
-            continue
-        # click on apply button
-        driver.execute_script(
-            "arguments[0].shadowRoot.querySelector('button').click();", apply_container
-        )
-        # wait for upload a resume radio to be visible
-        resume_radio = wait.until(
-            EC.visibility_of_element_located(
-                (By.CSS_SELECTOR, "input#upload-resume-radio")
-            )
-        )
-        apply_now_button = driver.find_element_by_css_selector("button#submit-job-btn")
-        # check if captcha is present and if so, wait for the user to fill this one out
-        # so as not to upset google too much
-        if driver.find_element_by_css_selector(
-            "div[id^=googleCaptchaSection]"
-        ).is_displayed():
-            print("Waiting for user to fill form out, since captcha is seen.")
-            while apply_now_button.is_displayed():
-                sleep(0.1)
-        else:
-            resume_radio.click()
-            # enter file location into file input
-            resume_file_input = driver.find_element_by_css_selector(
-                "input#upload-resume-file-input"
-            )
-            resume_file_input.send_keys(args.resume_path)
-            apply_now_button.click()
+            ...
+        # job is done processing
+        completed_jobs.append(job_id)
+        with open(USER_DATA_PATH, "w") as file_handle:
+            file_handle.write(json.dumps(completed_jobs))
