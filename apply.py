@@ -1,6 +1,7 @@
 from os import scandir
 import argparse
 from itertools import count
+from time import sleep
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -128,12 +129,20 @@ for page_number in count(1):
                 (By.CSS_SELECTOR, "input#upload-resume-radio")
             )
         )
-        resume_radio.click()
-        # enter file location into file input
-        resume_file_input = driver.find_element_by_css_selector(
-            "input#upload-resume-file-input"
-        )
-        resume_file_input.send_keys(args.resume_path)
-        submit_job_button = driver.find_element_by_css_selector("button#submit-job-btn")
-        submit_job_button.click()
-        quit()
+        apply_now_button = driver.find_element_by_css_selector("button#submit-job-btn")
+        # check if captcha is present and if so, wait for the user to fill this one out
+        # so as not to upset google too much
+        if driver.find_element_by_css_selector(
+            "div[id^=googleCaptchaSection]"
+        ).is_displayed():
+            print("Waiting for user to fill form out, since captcha is seen.")
+            while apply_now_button.is_displayed():
+                sleep(0.1)
+        else:
+            resume_radio.click()
+            # enter file location into file input
+            resume_file_input = driver.find_element_by_css_selector(
+                "input#upload-resume-file-input"
+            )
+            resume_file_input.send_keys(args.resume_path)
+            apply_now_button.click()
