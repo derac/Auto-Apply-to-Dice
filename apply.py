@@ -57,7 +57,7 @@ argparser.add_argument(
     "-wait_s",
     "-w",
     type=int,
-    default=3,
+    default=5,
     help="Number of seconds to wait for selenium to find things.",
 )
 argparser.description = "Automatically apply for jobs on Dice."
@@ -172,9 +172,12 @@ for page_number in count(1):
             #         while apply_now_button.is_displayed():
             #             sleep(0.1)
             # else:
-            driver.find_element_by_css_selector('input[name="isGoogleCaptchaOn"]')[
-                "value"
-            ] = "false"
+            is_captcha_on = driver.find_element_by_css_selector(
+                'input[name="isGoogleCaptchaOn"]'
+            )
+            driver.execute_script(
+                "arguments[0].setAttribute('value','false')", is_captcha_on
+            )
 
             apply_now_button.click()
         except Exception as e:
