@@ -26,6 +26,12 @@ argparser.add_argument(
     required=True,
     help="Password for the user.",
 )
+# argparser.add_argument(
+#     "-api_key",
+#     "-a",
+#     type=str,
+#     help="API key to use with the 2captcha service. If not provided, you may enter captchas manually",
+# )
 argparser.add_argument(
     "-keyword",
     "-k",
@@ -143,24 +149,36 @@ for page_number in count(1):
             apply_now_button = driver.find_element_by_css_selector(
                 "button#submit-job-btn"
             )
+
+            # enter resume info
+            resume_radio.click()
+            # enter file location into file input
+            resume_file_input = driver.find_element_by_css_selector(
+                "input#upload-resume-file-input"
+            )
+            resume_file_input.send_keys(args.resume_path)
+
             # check if captcha is present and if so, wait for the user to fill this one out
             # so as not to upset google too much
-            if driver.find_element_by_css_selector(
-                "div[id^=googleCaptchaSection]"
-            ).is_displayed():
-                print("Waiting for user to fill form out, since captcha is seen.")
-                while apply_now_button.is_displayed():
-                    sleep(0.1)
-            else:
-                resume_radio.click()
-                # enter file location into file input
-                resume_file_input = driver.find_element_by_css_selector(
-                    "input#upload-resume-file-input"
-                )
-                resume_file_input.send_keys(args.resume_path)
-                apply_now_button.click()
-        except:
-            ...
+            # google_captcha = driver.find_element_by_css_selector(
+            #     "div[id^=googleCaptchaSection]"
+            # )
+            # if google_captcha.is_displayed():
+            #     if args.api_key:
+            #         # Solve captcha with 2captcha
+            #         ...
+            #     else:
+            #         print("Waiting for user to manually solve captcha.")
+            #         while apply_now_button.is_displayed():
+            #             sleep(0.1)
+            # else:
+            driver.find_element_by_css_selector('input[name="isGoogleCaptchaOn"]')[
+                "value"
+            ] = "false"
+
+            apply_now_button.click()
+        except Exception as e:
+            print("Applying to this job failed with error:", e)
         # job is done processing
         completed_jobs.append(job_id)
         with open(USER_DATA_PATH, "w") as file_handle:
