@@ -62,12 +62,15 @@ argparser.add_argument(
 )
 argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
+args.resume_path = os.path.abspath(args.resume_path)
 
 SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCode=US&radius=30&radiusUnit=mi&page=%s&pageSize=100&filters.postedDate=ONE&filters.employmentType=THIRD_PARTY&filters.easyApply=true&language=en"
 
 # see if any data exists for this user
 USER_DATA_PATH = os.path.join("cached_data", f"{args.username}.json")
 completed_jobs = []
+if not os.path.exists("cached_data"):
+    os.mkdir("cached_data")
 if os.path.exists(USER_DATA_PATH):
     with open(USER_DATA_PATH, "r") as file_handle:
         completed_jobs = json.loads(file_handle.read())
