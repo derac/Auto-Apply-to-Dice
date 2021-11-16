@@ -10,6 +10,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument(
@@ -26,18 +28,21 @@ argparser.add_argument(
     required=True,
     help="Password for the user.",
 )
-# argparser.add_argument(
-#     "-api_key",
-#     "-a",
-#     type=str,
-#     help="API key to use with the 2captcha service. If not provided, you may enter captchas manually",
-# )
 argparser.add_argument(
-    "-keyword",
+    "-keywords",
     "-k",
     type=str,
+    nargs="+",
     required=True,
-    help="Keyword to search for jobs by.",
+    help="Keywords to search for jobs by, will be split by space then ANDed together.",
+)
+argparser.add_argument(
+    "-blacklist",
+    "-b",
+    type=str,
+    nargs="+",
+    default=[],
+    help="Keyword blacklist, will be split by space then ANDed together.",
 )
 argparser.add_argument(
     "-resume_path",
@@ -64,7 +69,7 @@ argparser.description = "Automatically apply for jobs on Dice."
 args = argparser.parse_args()
 args.resume_path = os.path.abspath(args.resume_path)
 
-SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={args.keyword}&countryCode=US&radius=30&radiusUnit=mi&page=%s&pageSize=100&filters.postedDate=ONE&filters.employmentType=THIRD_PARTY&filters.easyApply=true&language=en"
+SEARCH_URL_WITHOUT_PAGE = f"https://www.dice.com/jobs?q={'%20'.join(args.keywords)}&countryCode=US&radius=30&radiusUnit=mi&page=%s&pageSize=100&filters.postedDate=ONE&filters.employmentType=THIRD_PARTY&filters.easyApply=true&language=en"
 
 # see if any data exists for this user
 USER_DATA_PATH = os.path.join("cached_data", f"{args.username}.json")
@@ -80,7 +85,7 @@ if os.path.exists(USER_DATA_PATH):
 options = Options()
 if args.cache_path:
     options.add_argument("user-data-dir=" + args.cache_path)
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 wait = WebDriverWait(driver, args.wait_s)
 
 # log in
@@ -126,13 +131,19 @@ for page_number in count(1):
         job_urls.append((job_id, link.text, link.get_attribute("href")))
 
     for job_id, job_text, job_url in job_urls:
-        print(f"Applying to {job_text}")
+        print(f"Applying to {job_text}.")
+        if not all(kw.lower() in job_text.lower() for kw in args.keywords):
+            print("All keywords were not in the job title, skipping.")
+            continue
+        if any(kw.lower() in job_text.lower() for kw in args.blacklist):
+            print("Blacklisted word found in job title, skipping.")
+            continue
         driver.get(job_url)
-        apply_container = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "dhi-wc-apply-button"))
-        )
         # wait for apply container to say Apply Now
         try:
+            apply_container = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "dhi-wc-apply-button"))
+            )
             wait.until(
                 EC.text_to_be_present_in_element(
                     (By.CSS_SELECTOR, "dhi-wc-apply-button"), "Apply Now"
@@ -143,12 +154,21 @@ for page_number in count(1):
                 "arguments[0].shadowRoot.querySelector('button').click();",
                 apply_container,
             )
+
             # wait for upload a resume radio to be visible
             resume_radio = wait.until(
                 EC.visibility_of_element_located(
                     (By.CSS_SELECTOR, "input#upload-resume-radio")
                 )
             )
+            # check to see if the daily limit exceeded message is shown
+            daily_limit = driver.find_element_by_css_selector(
+                "div[id^=googleCaptchaSection]"
+            )
+            if daily_limit.is_displayed():
+                print("Daily limit reached.")
+                quit()
+
             apply_now_button = driver.find_element_by_css_selector(
                 "button#submit-job-btn"
             )
@@ -161,20 +181,6 @@ for page_number in count(1):
             )
             resume_file_input.send_keys(args.resume_path)
 
-            # check if captcha is present and if so, wait for the user to fill this one out
-            # so as not to upset google too much
-            # google_captcha = driver.find_element_by_css_selector(
-            #     "div[id^=googleCaptchaSection]"
-            # )
-            # if google_captcha.is_displayed():
-            #     if args.api_key:
-            #         # Solve captcha with 2captcha
-            #         ...
-            #     else:
-            #         print("Waiting for user to manually solve captcha.")
-            #         while apply_now_button.is_displayed():
-            #             sleep(0.1)
-            # else:
             is_captcha_on = driver.find_element_by_css_selector(
                 'input[name="isGoogleCaptchaOn"]'
             )
